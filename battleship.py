@@ -1,8 +1,15 @@
 # coding=utf-8
 import random
+import os
+import platform
+import time
 
 
 def draw_board(g):
+    # if platform.system() == 'Windows':
+    #     os.system('cls')
+    # else:
+    #     os.system('clear')
     print("""
       1 2 3 4 5 6 7 8 9 10
     A {} {} {} {} {} {} {} {} {} {}
@@ -27,67 +34,79 @@ def draw_board(g):
         g['I', 1], g['I', 2], g['I', 3], g['I', 4], g['I', 5], g['I', 6], g['I', 7], g['I', 8], g['I', 9], g['I', 10],
         g['J', 1], g['J', 2], g['J', 3], g['J', 4], g['J', 5], g['J', 6], g['J', 7], g['J', 8], g['J', 9], g['J', 10])
     )
+    time.sleep(0.1)
 
 
 def init_grid():
-    grid = {}
+    """
+    Create empty grid
+    """
+    g = {}
     for x in 'ABCDEFGHIJ':
         for y in range(1, 11):
-            grid[x, y] = empty
-    return grid
+            g[x, y] = empty
+    return g
 
 
 def add_ship(g, length):
+    """
+    Find available spot on board to deploy ship
+    """
     while True:
-        direction = random.choice(['horizontal', 'vertical'])
-        row = random.choice(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'])
-        col = random.choice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        direction = random.choice([(0, 1), (1, 0)])  # horizontal→(0, 1) vertical↓(1, 0)
+        row = random.choice(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'])  # choose row
+        col = random.choice(range(1, 11))  # choose column
         can_position_ship = True
-        if direction == 'horizontal':
-            for i in range(length):
-                try:
-                    if g[row, col + i] != empty:
-                        can_position_ship = False
-                        break
-                    for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
-                        try:
-                            if g[chr(ord(row) + a), col + b + i] == ship:
-                                can_position_ship = False
-                                break
-                        except KeyError:
-                            pass
-                except KeyError:
+        for i in range(length):
+            try:
+                if g[chr(ord(row) + i*direction[0]), col + i*direction[1]] == ship:
                     can_position_ship = False
                     break
-            if can_position_ship:
-                for i in range(length):
-                    g[row, col + i] = ship
-                return
-        elif direction == 'vertical':
-            for i in range(length):
+            except KeyError:
+                can_position_ship = False
+                break
+            for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
                 try:
-                    if g[chr(ord(row) + i), col] != empty:
+                    if g[chr(ord(row) + a + i*direction[0]), col + b + i*direction[1]] == ship:
                         can_position_ship = False
                         break
-                    for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
-                        try:
-                            if g[chr(ord(row) + a + i), col + b] == ship:
-                                can_position_ship = False
-                                break
-                        except KeyError:
-                            pass
                 except KeyError:
-                    can_position_ship = False
-                    break
-            if can_position_ship:
-                for i in range(length):
-                    g[chr(ord(row) + i), col] = ship
-                return
+                    pass
+        if can_position_ship:
+            for i in range(length):
+                g[chr(ord(row) + i*direction[0]), col + i*direction[1]] = ship
+            # draw_board(grid)
+            return
+
+
+def get_user_guess(g, g2):
+    while True:
+        draw_board(g2)
+        user = str(input("Select Row and column (e.g. B8): "))
+        try:
+            row = user[0].upper()
+            col = int(user[1:])
+            if row in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'] and col in range(1, 11):
+                if g2[row, col] == empty:
+                    if g[row, col] == ship:
+                        g2[row, col] = hit
+                    else:
+                        g2[row, col] = miss
+        except ValueError:
+            pass
+        except IndexError:
+            pass
 
 
 empty = '·'
 ship = '■'
+hit = 'x'
+miss = '~'
+fleet = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
 grid = init_grid()
-for ship_size in [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]:
+for ship_size in fleet:
     add_ship(grid, ship_size)
-draw_board(grid)
+
+grid2 = init_grid()
+while True:
+    get_user_guess(grid, grid2)
