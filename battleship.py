@@ -4,6 +4,9 @@ import os
 import platform
 import time
 import sys
+import pprint
+import json
+
 
 
 def clear():
@@ -77,10 +80,11 @@ def add_ship(g, length):
                 except KeyError:
                     pass
         if can_position_ship:
+            ship_position = {}
             for i in range(length):
                 g[chr(ord(row) + i*direction[0]), col + i*direction[1]] = ship
-            # draw_board(grid)
-            return
+                ship_position[(chr(ord(row) + i*direction[0]), col + i*direction[1])] = None
+            return ship_position
 
 
 def get_user_guess(g, g2):
@@ -93,7 +97,7 @@ def get_user_guess(g, g2):
     try:
         row = user[0].upper()
         col = int(user[1:])
-        if row in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'] and col in range(1, 11):
+        if row in 'ABCDEFGHIJ' and col in range(1, 11):
             if g2[row, col] == empty:
                 if g[row, col] == ship:
                     g2[row, col] = hit
@@ -108,6 +112,10 @@ def get_user_guess(g, g2):
         pass
 
 
+def check_ship_sunk(g, g2):
+    pass
+
+
 empty = '·'
 ship = '■'
 hit = 'X'
@@ -115,14 +123,17 @@ miss = '~'
 fleet = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
 fleet_sum = sum(fleet)
 grid = init_grid()
-for ship_size in fleet:
-    add_ship(grid, ship_size)
+fleet_positions = {}
+for counter, ship_size in enumerate(fleet, 1):
+    fleet_positions[counter] = add_ship(grid, ship_size)
+pprint.pprint(fleet_positions)
 grid2 = init_grid()
 total_hits = 0
 while total_hits < fleet_sum:
-    clear()
+    # clear()
     # draw_board(grid)
     # draw_board(grid2)
     if get_user_guess(grid, grid2) == hit:
         total_hits += 1
+    check_ship_sunk(grid, grid2)
 print("You Win!")
