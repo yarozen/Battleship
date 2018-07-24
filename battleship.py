@@ -3,13 +3,17 @@ import random
 import os
 import platform
 import time
+import sys
 
 
-def draw_board(g):
+def clear():
     if platform.system() == 'Windows':
         os.system('cls')
     else:
         os.system('clear')
+
+
+def draw_board(g):
     print("""
       1 2 3 4 5 6 7 8 9 10
     A {} {} {} {} {} {} {} {} {} {}
@@ -80,33 +84,46 @@ def add_ship(g, length):
 
 
 def get_user_guess(g, g2):
-    while True:
-        draw_board(g2)
+    draw_board(g)
+    draw_board(g2)
+    try:
         user = str(input("Select Row and column (e.g. B8): "))
-        try:
-            row = user[0].upper()
-            col = int(user[1:])
-            if row in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'] and col in range(1, 11):
-                if g2[row, col] == empty:
-                    if g[row, col] == ship:
-                        g2[row, col] = hit
-                    else:
-                        g2[row, col] = miss
-        except ValueError:
-            pass
-        except IndexError:
-            pass
+    except KeyboardInterrupt:
+        sys.exit(0)
+    try:
+        row = user[0].upper()
+        col = int(user[1:])
+        if row in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'] and col in range(1, 11):
+            if g2[row, col] == empty:
+                if g[row, col] == ship:
+                    g2[row, col] = hit
+                    return hit
+                    print("Hit! you have another turn")
+                else:
+                    g2[row, col] = miss
+                    print("Miss!, opponent's turn")
+    except ValueError:
+        pass
+    except IndexError:
+        pass
 
 
 empty = '·'
 ship = '■'
-hit = 'x'
+hit = 'X'
 miss = '~'
 fleet = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
+#fleet = [1]
+fleet_sum = sum(fleet)
 grid = init_grid()
 for ship_size in fleet:
     add_ship(grid, ship_size)
-
 grid2 = init_grid()
-while True:
-    get_user_guess(grid, grid2)
+total_hits = 0
+while total_hits < fleet_sum:
+    clear()
+    # draw_board(grid)
+    # draw_board(grid2)
+    if get_user_guess(grid, grid2) == hit:
+        total_hits += 1
+print("You Win!")
