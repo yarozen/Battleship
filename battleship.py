@@ -1,6 +1,6 @@
+# coding=utf-8
 import random
-import time
-import os
+
 
 def draw_board(g):
     print("""
@@ -29,8 +29,6 @@ def draw_board(g):
     )
 
 
-empty = '.'
-
 def init_grid():
     grid = {}
     for x in 'ABCDEFGHIJ':
@@ -39,51 +37,57 @@ def init_grid():
     return grid
 
 
-def set_board(g, length):
+def add_ship(g, length):
     while True:
-        print("test")
-        layout = random.choice(['hor', 'ver'])
+        direction = random.choice(['horizontal', 'vertical'])
         row = random.choice(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'])
         col = random.choice([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-        print("layout " + layout)
-        if layout == 'hor':
+        can_position_ship = True
+        if direction == 'horizontal':
             for i in range(length):
                 try:
                     if g[row, col + i] != empty:
+                        can_position_ship = False
                         break
+                    for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
+                        try:
+                            if g[chr(ord(row) + a), col + b + i] == ship:
+                                can_position_ship = False
+                                break
+                        except KeyError:
+                            pass
                 except KeyError:
+                    can_position_ship = False
                     break
-            else:
+            if can_position_ship:
                 for i in range(length):
-                    g[row, col + i] = '*'
-                return g
-        elif layout == 'ver':
+                    g[row, col + i] = ship
+                return
+        elif direction == 'vertical':
             for i in range(length):
                 try:
                     if g[chr(ord(row) + i), col] != empty:
+                        can_position_ship = False
                         break
+                    for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
+                        try:
+                            if g[chr(ord(row) + a + i), col + b] == ship:
+                                can_position_ship = False
+                                break
+                        except KeyError:
+                            pass
                 except KeyError:
+                    can_position_ship = False
                     break
-            else:
+            if can_position_ship:
                 for i in range(length):
-                    g[chr(ord(row) + i), col] = '*'
-                return g
+                    g[chr(ord(row) + i), col] = ship
+                return
 
 
-
+empty = '·'
+ship = '■'
 grid = init_grid()
+for ship_size in [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]:
+    add_ship(grid, ship_size)
 draw_board(grid)
-new_grid = set_board(grid, 4)
-new_grid = set_board(grid, 3)
-new_grid = set_board(grid, 3)
-new_grid = set_board(grid, 2)
-new_grid = set_board(grid, 2)
-new_grid = set_board(grid, 2)
-new_grid = set_board(grid, 1)
-new_grid = set_board(grid, 1)
-new_grid = set_board(grid, 1)
-new_grid = set_board(grid, 1)
-
-
-draw_board(new_grid)
-
