@@ -6,10 +6,10 @@ import time
 
 
 def draw_board(g):
-    # if platform.system() == 'Windows':
-    #     os.system('cls')
-    # else:
-    #     os.system('clear')
+    if platform.system() == 'Windows':
+        os.system('cls')
+    else:
+        os.system('clear')
     print("""
       1 2 3 4 5 6 7 8 9 10
     A {} {} {} {} {} {} {} {} {} {}
@@ -54,7 +54,7 @@ def add_ship(g, length):
     """
     while True:
         direction = random.choice([(0, 1), (1, 0)])  # horizontal→(0, 1) vertical↓(1, 0)
-        row = random.choice(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'])  # choose row
+        row = random.choice('ABCDEFGHIJ')  # choose row
         col = random.choice(range(1, 11))  # choose column
         can_position_ship = True
         for i in range(length):
