@@ -97,8 +97,8 @@ def get_user_guess(g, g2):
             if g2[row, col] == empty:
                 if g[row, col] == ship:
                     g2[row, col] = hit
-                    return hit
                     print("Hit! you have another turn")
+                    return hit
                 else:
                     g2[row, col] = miss
                     print("Miss!, opponent's turn")
@@ -113,7 +113,6 @@ ship = '■'
 hit = 'X'
 miss = '~'
 fleet = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
-#fleet = [1]
 fleet_sum = sum(fleet)
 grid = init_grid()
 for ship_size in fleet:
