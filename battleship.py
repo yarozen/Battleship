@@ -5,8 +5,6 @@ import platform
 import time
 import sys
 import pprint
-import json
-
 
 
 def clear():
@@ -45,9 +43,6 @@ def draw_board(g):
 
 
 def init_grid():
-    """
-    Create empty grid
-    """
     g = {}
     for x in 'ABCDEFGHIJ':
         for y in range(1, 11):
@@ -55,16 +50,13 @@ def init_grid():
     return g
 
 
-def add_ship(g, length):
-    """
-    Find available spot on board to deploy ship
-    """
+def find_available_spot_for_ship(ship_len, g):
     while True:
         direction = random.choice([(0, 1), (1, 0)])  # horizontal→(0, 1) vertical↓(1, 0)
         row = random.choice('ABCDEFGHIJ')  # choose row
         col = random.choice(range(1, 11))  # choose column
         can_position_ship = True
-        for i in range(length):
+        for i in range(ship_len):
             try:
                 if g[chr(ord(row) + i*direction[0]), col + i*direction[1]] == ship:
                     can_position_ship = False
@@ -81,59 +73,87 @@ def add_ship(g, length):
                     pass
         if can_position_ship:
             ship_position = {}
-            for i in range(length):
-                g[chr(ord(row) + i*direction[0]), col + i*direction[1]] = ship
-                ship_position[(chr(ord(row) + i*direction[0]), col + i*direction[1])] = None
+            for i in range(ship_len):
+                ship_position[(chr(ord(row) + i*direction[0]), col + i*direction[1])] = False
             return ship_position
 
 
-def get_user_guess(g, g2):
-    draw_board(g)
-    draw_board(g2)
-    try:
-        user = str(input("Select Row and column (e.g. B8): "))
-    except KeyboardInterrupt:
-        sys.exit(0)
-    try:
-        row = user[0].upper()
-        col = int(user[1:])
-        if row in 'ABCDEFGHIJ' and col in range(1, 11):
-            if g2[row, col] == empty:
-                if g[row, col] == ship:
-                    g2[row, col] = hit
-                    print("Hit! you have another turn")
-                    return hit
-                else:
-                    g2[row, col] = miss
-                    print("Miss!, opponent's turn")
-    except ValueError:
-        pass
-    except IndexError:
-        pass
+def get_user_guess():
+    while True:
+        draw_board(my_board)
+        draw_board(guess_board)
+        try:
+            user = str(input("Select Row and column (e.g. B8): "))
+        except KeyboardInterrupt:
+            sys.exit(0)
+        try:
+            row = user[0].upper()
+            col = int(user[1:])
+            if row in 'ABCDEFGHIJ' and col in range(1, 11):
+                if guess_board[row, col] == empty:
+                    return [row, col]
+        except ValueError:
+            pass
+        except IndexError:
+            pass
 
 
-def check_ship_sunk(g, g2):
-    pass
+def check_if_hit_or_miss(row, col):
+    if my_board[row, col] == ship:
+        guess_board[row, col] = hit
+        # print("Hit! you have another turn")
+        for i in fleet:
+            if (row, col) in fleet[i]:
+                fleet[i][row, col] = True
+                return i
+    else:
+        guess_board[row, col] = miss
+        # print("Miss!, opponent's turn")
+        return False
+
+
+def check_if_ship_sunk(i):
+    for part in fleet[i]:
+        if fleet[i][part] is False:
+            return False
+    else:
+        for part in fleet[i]:
+            guess_board[part] = ship
+        return True
+
+
+def get_ships_coordinates():
+    ships_position = {}
+    for ship_name, ship_len in enumerate(ships, 1):
+        ships_position[ship_name] = find_available_spot_for_ship(ship_len, my_board)
+        position_ship_on_my_board(ships_position[ship_name])
+    return ships_position
+
+
+def position_ship_on_my_board(ship_coordinates):
+    for square in ship_coordinates:
+        my_board[square] = ship
 
 
 empty = '·'
 ship = '■'
 hit = 'X'
 miss = '~'
-fleet = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
+ships = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
+my_board = init_grid()
+guess_board = init_grid()
+fleet = get_ships_coordinates()
 fleet_sum = sum(fleet)
-grid = init_grid()
-fleet_positions = {}
-for counter, ship_size in enumerate(fleet, 1):
-    fleet_positions[counter] = add_ship(grid, ship_size)
-pprint.pprint(fleet_positions)
-grid2 = init_grid()
-total_hits = 0
-while total_hits < fleet_sum:
-    # clear()
-    # draw_board(grid)
-    # draw_board(grid2)
-    if get_user_guess(grid, grid2) == hit:
-        total_hits += 1
-    check_ship_sunk(grid, grid2)
+ships_sunk = 0
+while ships_sunk < len(ships):
+    #clear()
+    # pprint.pprint(fleet)
+    row, col = get_user_guess()
+    ship_got_hit = check_if_hit_or_miss(row, col)
+    if ship_got_hit is not False:
+        if check_if_ship_sunk(ship_got_hit) is True:
+            ships_sunk += 1
+    else:
+        pass
+        # TODO switch turn
 print("You Win!")
