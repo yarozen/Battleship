@@ -113,12 +113,19 @@ def check_if_hit_or_miss(row, col):
 
 
 def check_if_ship_sunk(i):
-    for part in fleet[i]:
-        if fleet[i][part] is False:
+    for part in fleet[i]:  # check if all parts of the ship got hit
+        if fleet[i][part] is False:  # if at least one part wasn't hit return false
             return False
-    else:
-        for part in fleet[i]:
+    else:  # if all parts of ship got hit
+        for part in fleet[i]:  # reveal ship on guess board (replace the hit symbol with the ship symbol)
             guess_board[part] = ship
+            # mark squares around revealed ship as miss on guess board (because ships cannot be adjacent to each other)
+            for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
+                try:
+                    if guess_board[chr(ord(part[0]) + a), part[1] + b] != ship:
+                        guess_board[chr(ord(part[0]) + a), part[1] + b] = miss
+                except KeyError:
+                    pass
         return True
 
 
