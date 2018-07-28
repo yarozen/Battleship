@@ -4,7 +4,13 @@ import os
 import platform
 import time
 import sys
-import pprint
+import socket
+
+
+def get_ip_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    return s.getsockname()[0]
 
 
 def clear():
@@ -142,6 +148,19 @@ def position_ship_on_my_board(ship_coordinates):
         my_board[square] = ship
 
 
+def wait_for_opponent_to_connect():
+    host = get_ip_address()
+    port = 5000
+    s = socket.socket()
+    s.bind((host, port))
+    s.listen(1)
+    print("Welcome to BATTLESHIP!\n"
+          "Waiting for opponent to join me at {}:{} ...".format(host, port))
+    c, addr = s.accept()
+    print("opponent just connected from {}".format(addr))
+    c.send(b"Welcome to BATTLESHIP!\n")
+    c.recv(1024)
+
 empty = '·'
 ship = '■'
 hit = 'X'
@@ -152,13 +171,17 @@ guess_board = init_grid()
 fleet = get_ships_coordinates()
 fleet_sum = sum(fleet)
 ships_sunk = 0
+
+wait_for_opponent_to_connect()
+
+
 while ships_sunk < len(ships):
     #clear()
     # pprint.pprint(fleet)
     row, col = get_user_guess()
     ship_got_hit = check_if_hit_or_miss(row, col)
-    if ship_got_hit is not False:
-        if check_if_ship_sunk(ship_got_hit) is True:
+    if ship_got_hit:
+        if check_if_ship_sunk(ship_got_hit):
             ships_sunk += 1
     else:
         pass
