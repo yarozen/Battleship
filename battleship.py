@@ -2,7 +2,6 @@
 import random
 import os
 import platform
-import time
 import sys
 import socket
 
@@ -21,7 +20,7 @@ def clear():
 
 
 def draw_board(g):
-    print("""
+    return ("""
       1 2 3 4 5 6 7 8 9 10
     A {} {} {} {} {} {} {} {} {} {}
     B {} {} {} {} {} {} {} {} {} {}
@@ -45,14 +44,13 @@ def draw_board(g):
         g['I', 1], g['I', 2], g['I', 3], g['I', 4], g['I', 5], g['I', 6], g['I', 7], g['I', 8], g['I', 9], g['I', 10],
         g['J', 1], g['J', 2], g['J', 3], g['J', 4], g['J', 5], g['J', 6], g['J', 7], g['J', 8], g['J', 9], g['J', 10])
     )
-    time.sleep(0.1)
 
 
 def init_grid():
     g = {}
     for x in 'ABCDEFGHIJ':
         for y in range(1, 11):
-            g[x, y] = empty
+            g[x, y] = symbols('empty')
     return g
 
 
@@ -64,7 +62,7 @@ def find_available_spot_for_ship(ship_len, g):
         can_position_ship = True
         for i in range(ship_len):
             try:
-                if g[chr(ord(row) + i*direction[0]), col + i*direction[1]] == ship:
+                if g[chr(ord(row) + i*direction[0]), col + i*direction[1]] == symbols('ship'):
                     can_position_ship = False
                     break
             except KeyError:
@@ -72,7 +70,7 @@ def find_available_spot_for_ship(ship_len, g):
                 break
             for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
                 try:
-                    if g[chr(ord(row) + a + i*direction[0]), col + b + i*direction[1]] == ship:
+                    if g[chr(ord(row) + a + i*direction[0]), col + b + i*direction[1]] == symbols('ship'):
                         can_position_ship = False
                         break
                 except KeyError:
@@ -84,19 +82,30 @@ def find_available_spot_for_ship(ship_len, g):
             return ship_position
 
 
-def get_user_guess():
+def get_user_guess(board, guess_board, my_turn, c):
     while True:
-        draw_board(my_board)
-        draw_board(guess_board)
+        if my_turn:
+            print(draw_board(board))
+            print(draw_board(guess_board))
+        else:
+            c.send(draw_board(board).replace('\n', '\r\n').encode())
+            c.send(draw_board(guess_board).replace('\n', '\r\n').encode())
         try:
-            user = str(input("Select Row and column (e.g. B8): "))
+            if my_turn:
+                user = str(input("Select Row and column (e.g. B8): "))
+            else:
+                c.send("Select Row and column (e.g. B8): ".encode())
+                user = ""
+                while '\n' not in user:
+                    user += c.recv(1024).decode()
+                user = user.strip()
         except KeyboardInterrupt:
             sys.exit(0)
         try:
             row = user[0].upper()
             col = int(user[1:])
             if row in 'ABCDEFGHIJ' and col in range(1, 11):
-                if guess_board[row, col] == empty:
+                if guess_board[row, col] == symbols('empty'):
                     return [row, col]
         except ValueError:
             pass
@@ -104,48 +113,49 @@ def get_user_guess():
             pass
 
 
-def check_if_hit_or_miss(row, col):
-    if my_board[row, col] == ship:
-        guess_board[row, col] = hit
+def check_if_hit_or_miss(board, guess_board, fleet, row, col):
+    if board[row, col] == symbols('ship'):
+        guess_board[row, col] = symbols('hit')
         # print("Hit! you have another turn")
         for i in fleet:
             if (row, col) in fleet[i]:
                 fleet[i][row, col] = True
                 return i
     else:
-        guess_board[row, col] = miss
+        guess_board[row, col] = symbols('miss')
         # print("Miss!, opponent's turn")
         return False
 
 
-def check_if_ship_sunk(i):
+def check_if_ship_sunk(guess_board, fleet, i):
     for part in fleet[i]:  # check if all parts of the ship got hit
         if fleet[i][part] is False:  # if at least one part wasn't hit return false
             return False
     else:  # if all parts of ship got hit
         for part in fleet[i]:  # reveal ship on guess board (replace the hit symbol with the ship symbol)
-            guess_board[part] = ship
+            guess_board[part] = symbols('ship')
             # mark squares around revealed ship as miss on guess board (because ships cannot be adjacent to each other)
             for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
                 try:
-                    if guess_board[chr(ord(part[0]) + a), part[1] + b] != ship:
-                        guess_board[chr(ord(part[0]) + a), part[1] + b] = miss
+                    if guess_board[chr(ord(part[0]) + a), part[1] + b] != symbols('ship'):
+                        guess_board[chr(ord(part[0]) + a), part[1] + b] = symbols('miss')
                 except KeyError:
                     pass
         return True
 
 
-def get_ships_coordinates():
+def get_ships_coordinates(ships, board):
     ships_position = {}
     for ship_name, ship_len in enumerate(ships, 1):
-        ships_position[ship_name] = find_available_spot_for_ship(ship_len, my_board)
-        position_ship_on_my_board(ships_position[ship_name])
-    return ships_position
+        ships_position[ship_name] = find_available_spot_for_ship(ship_len, board)
+        board = position_ship_on_my_board(board, ships_position[ship_name])
+    return board, ships_position
 
 
-def position_ship_on_my_board(ship_coordinates):
+def position_ship_on_my_board(board, ship_coordinates):
     for square in ship_coordinates:
-        my_board[square] = ship
+        board[square] = symbols('ship')
+    return board
 
 
 def wait_for_opponent_to_connect():
@@ -154,36 +164,65 @@ def wait_for_opponent_to_connect():
     s = socket.socket()
     s.bind((host, port))
     s.listen(1)
-    print("Welcome to BATTLESHIP!\n"
+    print("Welcome to BATTLESHIP!\r\n"
           "Waiting for opponent to join me at {}:{} ...".format(host, port))
     c, addr = s.accept()
     print("opponent just connected from {}".format(addr))
-    c.send(b"Welcome to BATTLESHIP!\n")
-    c.recv(1024)
-
-empty = '·'
-ship = '■'
-hit = 'X'
-miss = '~'
-ships = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
-my_board = init_grid()
-guess_board = init_grid()
-fleet = get_ships_coordinates()
-fleet_sum = sum(fleet)
-ships_sunk = 0
-
-wait_for_opponent_to_connect()
+    c.send(b"Welcome to BATTLESHIP!\r\n")
+    # c.recv(1024)
+    return c
 
 
-while ships_sunk < len(ships):
-    #clear()
-    # pprint.pprint(fleet)
-    row, col = get_user_guess()
-    ship_got_hit = check_if_hit_or_miss(row, col)
-    if ship_got_hit:
-        if check_if_ship_sunk(ship_got_hit):
-            ships_sunk += 1
-    else:
-        pass
-        # TODO switch turn
-print("You Win!")
+def symbols(action):
+    switcher = {
+        # 'ship':  '■',
+        # 'empty': '·',
+        # 'hit':   'X',
+        # 'miss':  '~',
+        'ship': '*',
+        'empty': '.',
+        'hit': 'x',
+        'miss': '~',
+    }
+    return switcher.get(action)
+
+
+def main():
+    ships = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
+    ###
+    my_board = init_grid()
+    my_guess_board = init_grid()
+    my_board, my_fleet = get_ships_coordinates(ships, my_board)
+    my_ships_sunk = 0
+    ###
+    opponent_board = init_grid()
+    opponent_guess_board = init_grid()
+    opponent_board, opponent_fleet = get_ships_coordinates(ships, opponent_board)
+    opponent_ships_sunk = 0
+    ###
+    my_turn = True
+    c = wait_for_opponent_to_connect()
+    c.send(draw_board(opponent_board).replace('\n', '\r\n').encode(encoding='UTF-8'))
+    c.send(draw_board(opponent_guess_board).replace('\n', '\r\n').encode(encoding='UTF-8'))
+    while my_ships_sunk < len(ships) and opponent_ships_sunk < len(ships):
+        if my_turn:
+            row, col = get_user_guess(my_board, my_guess_board, my_turn, c)
+            ship_got_hit = check_if_hit_or_miss(opponent_board, my_guess_board, opponent_fleet, row, col)
+            if ship_got_hit:
+                if check_if_ship_sunk(my_guess_board, opponent_fleet, ship_got_hit):
+                    opponent_ships_sunk += 1
+            else:
+                my_turn = False
+        else:
+            row, col = get_user_guess(opponent_board, opponent_guess_board, my_turn, c)
+            ship_got_hit = check_if_hit_or_miss(my_board, opponent_guess_board, my_fleet, row, col)
+            if ship_got_hit:
+                if check_if_ship_sunk(opponent_guess_board, my_fleet, ship_got_hit):
+                    my_ships_sunk += 1
+            else:
+                my_turn = True
+    print("You Win!")
+
+
+if __name__ == '__main__':
+    main()
