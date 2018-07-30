@@ -187,6 +187,9 @@ def symbols(action):
     return switcher.get(action)
 
 
+def init_game(board, guess_board, ships):
+    board =
+
 def main():
     ships = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
     ###
