@@ -5,6 +5,11 @@ from itertools import cycle
 
 class Player:
     ships_len = (4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
+    sym_ship = '@'
+    sym_hit = 'x'
+    sym_miss = '~'
+    sym_destroyed = '%'
+    sym_empty = '.'
 
     def __init__(self, name):
         self.name = name
@@ -12,14 +17,14 @@ class Player:
         self.game_board = self.__create_empty_board()
         self.guess_board = self.__create_empty_board()
         self.__position_ships_on_board()
-        self.ships_sunken = 0
+        self.ships_destroyed = 0
 
     @staticmethod
     def __create_empty_board():
         temp = {}
         for x in 'ABCDEFGHIJ':
             for y in range(1, 11):
-                temp[x, y] = '.'
+                temp[x, y] = __class__.sym_empty
         return temp
 
     def print_board(self):
@@ -70,7 +75,8 @@ J {} {} {} {} {} {} {} {} {} {}
                 for part in range(ship_len):
                     for a, b in [(0, 0), (-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
                         try:
-                            if self.game_board[chr(ord(row) + part*direction[0] + a), col + part*direction[1] + b] != '.':
+                            if self.game_board[chr(ord(row) + part*direction[0] + a), col + part*direction[1] + b] \
+                                    != __class__.sym_empty:
                                 break
                         except KeyError:
                             if a == 0 and b == 0:
@@ -82,7 +88,7 @@ J {} {} {} {} {} {} {} {} {} {}
                 else:
                     self.fleet[ship_num] = temp
                     for part in self.fleet[ship_num]:
-                        self.game_board[part] = '*'
+                        self.game_board[part] = __class__.sym_ship
                     break
 
     def get_user_guess(self):
@@ -92,7 +98,7 @@ J {} {} {} {} {} {} {} {} {} {}
                 row = user[0].upper()
                 col = int(user[1:])
                 if row in 'ABCDEFGHIJ' and col in range(1, 11):
-                    if self.guess_board[row, col] == '.':
+                    if self.guess_board[row, col] == __class__.sym_empty:
                         return [row, col]
             except ValueError:
                 pass
@@ -102,7 +108,7 @@ J {} {} {} {} {} {} {} {} {} {}
                 sys.exit(0)
     
     def check_if_hit(self, row, col):
-        if self.game_board[row, col] == '*':
+        if self.game_board[row, col] == __class__.sym_ship:
             return True
         return False
 
@@ -118,17 +124,26 @@ J {} {} {} {} {} {} {} {} {} {}
                 self.fleet[ship][row, col] = True
                 return ship
 
-    def check_if_ship_sunk(self, ship):
+    def check_if_ship_destroyed(self, ship):
         for part in self.fleet[ship]:  # check if all parts of the ship got hit
             if self.fleet[ship][part] is False:  # if at least one part wasn't hit return false
                 return False
         else:  # if all parts of ship got hit
             return True
 
-    def mark_squares_around_sunken_ship_in_guess_board(self, ship):
+    def mark_destroyed_ship_in_guess_board(self, ship):
+        for part in ship:
+            #print("part: {}".format(part))
+            self.guess_board[part] = '%'
+            for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
+                try:
+                    if self.guess_board[chr(ord(part[0]) + a), part[1] + b] == __class__.sym_empty:
+                        self.guess_board[chr(ord(part[0]) + a), part[1] + b] = __class__.sym_miss
+                except KeyError:
+                    pass
         pass  # TODO write function
 
-    def mark_squares_around_sunken_ship_in_game_board(self, ship):
+    def mark_squares_around_destroyed_ship_in_game_board(self, ship):
         pass  # TODO write function
 
 
@@ -139,7 +154,7 @@ def main():
     p2.print_board()
     c = cycle((p1, p2))
     cur = next(c)
-    while cur.ships_sunken < len(Player.ships_len):
+    while cur.ships_destroyed < len(Player.ships_len):
         if cur == p1:
             other = p2
         else:
@@ -149,10 +164,10 @@ def main():
             cur.mark_on_guess_board(row, col, 'x')
             other.mark_on_game_board(row, col, 'x')
             ship = other.mark_on_fleet(row, col)
-            if other.check_if_ship_sunk(ship):
-                cur.mark_squares_around_sunken_ship_in_guess_board(ship)
-                other.mark_squares_around_sunken_ship_in_game_board(ship)
-                cur.ships_sunken += 1
+            if other.check_if_ship_destroyed(ship):
+                cur.mark_destroyed_ship_in_guess_board(other.fleet[ship])
+                other.mark_squares_around_destroyed_ship_in_game_board(ship)
+                cur.ships_destroyed += 1
         else:
             cur.mark_on_guess_board(row, col, '~')
             other.mark_on_game_board(row, col, '~')
