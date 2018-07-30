@@ -133,7 +133,6 @@ J {} {} {} {} {} {} {} {} {} {}
 
     def mark_destroyed_ship_in_guess_board(self, ship):
         for part in ship:
-            #print("part: {}".format(part))
             self.guess_board[part] = '%'
             for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
                 try:
@@ -141,10 +140,16 @@ J {} {} {} {} {} {} {} {} {} {}
                         self.guess_board[chr(ord(part[0]) + a), part[1] + b] = __class__.sym_miss
                 except KeyError:
                     pass
-        pass  # TODO write function
 
-    def mark_squares_around_destroyed_ship_in_game_board(self, ship):
-        pass  # TODO write function
+    def mark_destroyed_ship_in_game_board(self, ship):
+        for part in ship:
+            self.game_board[part] = '%'
+            for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
+                try:
+                    if self.game_board[chr(ord(part[0]) + a), part[1] + b] == __class__.sym_empty:
+                        self.game_board[chr(ord(part[0]) + a), part[1] + b] = __class__.sym_miss
+                except KeyError:
+                    pass
 
 
 def main():
@@ -166,7 +171,7 @@ def main():
             ship = other.mark_on_fleet(row, col)
             if other.check_if_ship_destroyed(ship):
                 cur.mark_destroyed_ship_in_guess_board(other.fleet[ship])
-                other.mark_squares_around_destroyed_ship_in_game_board(ship)
+                other.mark_destroyed_ship_in_game_board(other.fleet[ship])
                 cur.ships_destroyed += 1
         else:
             cur.mark_on_guess_board(row, col, '~')
