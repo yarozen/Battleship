@@ -191,6 +191,7 @@ def main():
             if s.recv(1024).decode() == "True":
                 p.mark_on_guess_board(row, col, 'x')
             else:
+                p.mark_on_guess_board(row, col, '~')
                 my_turn = False
         else:
             print("Waiting for {} to send his guess".format(opponent))
