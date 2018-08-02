@@ -159,7 +159,7 @@ J {} {} {} {} {} {} {} {} {} {}
     def mark_destroyed_ship_on_board(self, ship, board_type):
         if board_type == 'guess_board':
             for part in ship:
-                self.guess_board[part] = __class__.sym_hit
+                self.guess_board[part] = __class__.sym_destroyed
                 for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
                     try:
                         if self.guess_board[chr(ord(part[0]) + a), part[1] + b] == __class__.sym_empty:
@@ -168,7 +168,7 @@ J {} {} {} {} {} {} {} {} {} {}
                         pass
         elif board_type == 'game_board':
             for part in ship:
-                self.game_board[part] = __class__.sym_hit
+                self.game_board[part] = __class__.sym_destroyed
                 for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
                     try:
                         if self.game_board[chr(ord(part[0]) + a), part[1] + b] == __class__.sym_empty:
