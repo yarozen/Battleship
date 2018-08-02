@@ -9,11 +9,11 @@ from pickle import dumps, loads
 
 class Player:
     ships_len = (4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
-    sym_ship = '@'
-    sym_hit = 'x'
+    sym_ship = '●'
+    sym_hit = '○'
     sym_miss = '~'
     sym_destroyed = '%'
-    sym_empty = '.'
+    sym_empty = '·'
 
     def __init__(self, name):
         self.name = name
