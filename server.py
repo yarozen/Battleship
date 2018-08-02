@@ -45,7 +45,7 @@ class Player:
             if i == self.game_board:
                 print("{}\n{}".format(me, '-' * len(self.name)))
             else:
-                print("{}\n{}".format(opponent, '-' * len(self.name)))
+                print("{}\n{}".format(opponent, '-' * len(opponent)))
             print("""  1 2 3 4 5 6 7 8 9 10
 A {} {} {} {} {} {} {} {} {} {}
 B {} {} {} {} {} {} {} {} {} {}
