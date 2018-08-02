@@ -1,10 +1,10 @@
-import random
-import sys
-import socket
 import argparse
-from pickle import dumps, loads
 import os
 import platform
+import random
+import socket
+import sys
+from pickle import dumps, loads
 
 
 class Player:
@@ -91,7 +91,7 @@ J {} {} {} {} {} {} {} {} {} {}
                 for part in range(ship_len):
                     for a, b in [(0, 0), (-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
                         try:
-                            if self.game_board[chr(ord(row) + part*direction[0] + a), col + part*direction[1] + b] \
+                            if self.game_board[chr(ord(row) + part * direction[0] + a), col + part * direction[1] + b] \
                                     != __class__.sym_empty:
                                 break
                         except KeyError:
@@ -156,7 +156,7 @@ J {} {} {} {} {} {} {} {} {} {}
     def mark_destroyed_ship_on_board(self, ship, board_type):
         if board_type == 'guess_board':
             for part in ship:
-                self.guess_board[part] = '%'
+                self.guess_board[part] = __class__.sym_hit
                 for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
                     try:
                         if self.guess_board[chr(ord(part[0]) + a), part[1] + b] == __class__.sym_empty:
@@ -165,7 +165,7 @@ J {} {} {} {} {} {} {} {} {} {}
                         pass
         elif board_type == 'game_board':
             for part in ship:
-                self.game_board[part] = '%'
+                self.game_board[part] = __class__.sym_hit
                 for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
                     try:
                         if self.game_board[chr(ord(part[0]) + a), part[1] + b] == __class__.sym_empty:
@@ -241,7 +241,8 @@ def main():
                 ship_that_got_hit = p.mark_on_fleet(row, col)  # check which one of my ships got hit
                 if p.check_if_ship_destroyed(ship_that_got_hit):  # if the ship that got hit was destroyed
                     s.send(dumps(p.fleet[ship_that_got_hit]))  # notify opponent with coordinates of destroyed a ship
-                    p.mark_destroyed_ship_on_board(p.fleet[ship_that_got_hit], 'game_board')  # reveal ship on game board
+                    p.mark_destroyed_ship_on_board(p.fleet[ship_that_got_hit],
+                                                   'game_board')  # reveal ship on game board
                     p.my_ships_destroyed += 1  # increment ship destroyed counter
                     if p.my_ships_destroyed == len(p.ships_len):  # if all my ships are destroyed
                         break  # stop game main loop
