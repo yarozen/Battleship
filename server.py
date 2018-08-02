@@ -1,10 +1,15 @@
 import random
 import sys
 import socket
+import argparse
+from pickle import dumps, loads
+import os
+import platform
 
 
 class Player:
-    ships_len = (4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
+    #ships_len = (4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
+    ships_len = (4, 1)
     sym_ship = '@'
     sym_hit = 'x'
     sym_miss = '~'
@@ -17,7 +22,8 @@ class Player:
         self.game_board = self.__create_empty_board()
         self.guess_board = self.__create_empty_board()
         self.__position_ships_on_board()
-        self.ships_destroyed = 0
+        self.my_ships_destroyed = 0
+        self.opponent_ships_destroyed = 0
 
     @staticmethod
     def __create_empty_board():
@@ -27,7 +33,15 @@ class Player:
                 temp[x, y] = __class__.sym_empty
         return temp
 
+    @staticmethod
+    def clear():
+        if platform.system() == 'Windows':
+            os.system('cls')
+        else:
+            os.system('clear')
+
     def print_board(self, me, opponent):
+        self.clear()
         for i in (self.game_board, self.guess_board):
             if i == self.game_board:
                 print("{}\n{}".format(me, '-' * len(self.name)))
@@ -97,19 +111,19 @@ J {} {} {} {} {} {} {} {} {} {}
     def get_user_guess(self):
         while True:
             try:
-                user = str(input("{}, Select Row and column (e.g. B8): ".format(self.name)))
+                user = input("{}, Select Row and column (e.g. B8): ".format(self.name))
                 row = user[0].upper()
                 col = int(user[1:])
                 if row in 'ABCDEFGHIJ' and col in range(1, 11):
                     if self.guess_board[row, col] == __class__.sym_empty:
-                        return [row, col]
+                        return row, col
             except ValueError:
                 pass
             except IndexError:
                 pass
             except KeyboardInterrupt:
                 sys.exit(0)
-    
+
     def check_if_hit(self, row, col):
         if self.game_board[row, col] == __class__.sym_ship:
             return True
@@ -162,55 +176,85 @@ def get_ip_address():
 
 
 def main():
-    ###
-    if len(sys.argv) != 2 or sys.argv[1] != "client" and sys.argv[1] != "server":
-        print("Usage: {} [client|server]".format(__file__))
-        sys.exit(1)
-    mode = sys.argv[1]
     port = 5000
-    my_turn = True
+    # parsing arguments #
+    parser = argparse.ArgumentParser()
+    g = parser.add_mutually_exclusive_group()
+    g.add_argument('-c', dest='server_ip', help='Run as Client')
+    g.add_argument('-s', dest='server', action='store_true', help='Run as Server')
+    args = parser.parse_args()
+    if args.server is False and args.server_ip is None:
+        parser.error("at least one flag is required")
+    ##########
+
+    # handle connection #
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    if mode == "server":
+    if args.server:
         s.bind(("0.0.0.0", port))
         s.listen(1)
         print('Waiting for opponent to join me at {}:{}'.format(get_ip_address(), port))
         s, addr = s.accept()
         print('Received connection: {}:{}'.format(addr[0], addr[1]))
         my_turn = False
-    elif mode == "client":
-        s.connect(("127.0.0.1", port))
-    me = input("Enter your name: ")
-    s.send(me.encode())
-    opponent = s.recv(1024).decode()
-    p = Player(me)
-    p.print_board(me, opponent)
-    while p.ships_destroyed < len(p.ships_len):
-        if my_turn:
-            row, col = p.get_user_guess()
-            s.send("{},{}".format(row, col).encode())
-            if s.recv(1024).decode() == "True":
-                p.mark_on_guess_board(row, col, 'x')
-            else:
-                p.mark_on_guess_board(row, col, '~')
-                my_turn = False
-        else:
-            print("Waiting for {} to send his guess".format(opponent))
-            row, col = s.recv(1024).decode().split(',')
-            col = int(col)
-            if p.check_if_hit(row, col):
-                p.mark_on_game_board(row, col, 'x')
-                ship = p.mark_on_fleet(row, col)
-                if p.check_if_ship_destroyed(ship):
-                    p.mark_destroyed_ship_in_game_board(p.fleet[ship])
-                    print(p.fleet[ship])
-                    p.ships_destroyed += 1
-                s.send("True".encode())
-            else:
-                p.mark_on_game_board(row, col, '~')
-                s.send("False".encode())
-                my_turn = True
-        p.print_board(me, opponent)
-    print("{} is the winner!".format(cur.name))
+    else:
+        s.connect((args.server_ip, port))
+        my_turn = True
+    ##########
+
+    # get players name and print initial board #
+    my_name = input("Enter your name: ")  # get my name
+    s.send(dumps(my_name))  # send my name to opponent
+    opponent_name = loads(s.recv(1024))  # receive opponent's name
+    p = Player(my_name)  # create instance of my player
+    p.print_board(my_name, opponent_name)  # print initial boards
+    ##########
+
+    # ongoing game #
+    while True:  # main game loop
+        if my_turn:  # if it is my turn
+            row, col = p.get_user_guess()  # get my guess
+            s.send(dumps((row, col)))  # send my guess to opponent
+            hit = loads(s.recv(1024))  # get opponent's feedback on my guess (hit or miss)
+            if hit:  # if I hit one of the opponent's ships
+                p.mark_on_guess_board(row, col, p.sym_hit)  # mark the hit on my guess board
+                ship_destroyed = (loads(s.recv(1024)))  # get opponent notification it I destroyed a ship
+                if ship_destroyed:  # if I destroyed opponent's ship
+                    p.mark_destroyed_ship_in_guess_board(ship_destroyed)  # reveal the destroyed ship on my guess board
+                    p.opponent_ships_destroyed += 1  # increment my opponent's destroyed ship counter
+                    if p.opponent_ships_destroyed == len(p.ships_len):  # if all opponent's ships are destroyed
+                        break  # stop game main loop
+            else:  # if I missed
+                p.mark_on_guess_board(row, col, '~')  # mark miss on my guess board
+                my_turn = False  # switch turns
+        else:  # if its opponent's turn
+            print("Waiting for {} to send his guess".format(opponent_name))  # prompt waiting for opponent
+            row, col = loads(s.recv(1024))  # receive guessed row and column from opponent
+            if p.check_if_hit(row, col):  # if opponent hit one of my ships
+                s.send(dumps(True))  # notify opponent he hit one of my ships
+                p.mark_on_game_board(row, col, p.sym_hit)  # mark hit on my game board
+                ship_that_got_hit = p.mark_on_fleet(row, col)  # check which one of my ships got hit
+                if p.check_if_ship_destroyed(ship_that_got_hit):  # if the ship that got hit was destroyed
+                    s.send(dumps(p.fleet[ship_that_got_hit]))  # notify opponent that he destroyed a ship
+                    p.mark_destroyed_ship_in_game_board(p.fleet[ship_that_got_hit])  # reveal ship on game board
+                    p.my_ships_destroyed += 1  # increment ship destroyed counter
+                    if p.my_ships_destroyed == len(p.ships_len):  # if all my ships are destroyed
+                        break  # stop game main loop
+                else:  # if the ship that got hit wasn't destroyed
+                    s.send(dumps(False))  # notify opponent that the hit didn't destroy a ship
+            else:  # if opponent missed
+                s.send(dumps(False))  # notify opponent that he missed
+                p.mark_on_game_board(row, col, p.sym_miss)  # mark the miss on my game board
+                my_turn = True  # switch turn to opponent
+        p.print_board(my_name, opponent_name)  # print updated boards after each turn
+    ##########
+
+    # declare winner #
+    p.print_board(my_name, opponent_name)  # print final game board
+    if p.my_ships_destroyed > p.opponent_ships_destroyed:  # if opponent destroyed more ships than me
+        print("{} is the winner!".format(opponent_name))  # declare opponent as the winner
+    else:  # if I destroyed more ships than opponent
+        print("{} is the winner!".format(my_name))  # declare me as the winner
+    ##########
 
 
 if __name__ == '__main__':
