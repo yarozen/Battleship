@@ -81,6 +81,9 @@ J {} {} {} {} {} {} {} {} {} {}
             )
 
     def __position_ships_on_board(self):
+        """
+        Ships are placed so that no ship touches any other ship, not even diagonally.
+        """
         for ship_num, ship_len in enumerate(self.ships_len, 1):
             self.fleet[ship_num] = {}
             while True:
