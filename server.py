@@ -177,6 +177,7 @@ def get_ip_address():
 
 def main():
     port = 5000
+
     # parsing arguments #
     parser = argparse.ArgumentParser()
     g = parser.add_mutually_exclusive_group()
@@ -234,8 +235,8 @@ def main():
                 p.mark_on_game_board(row, col, p.sym_hit)  # mark hit on my game board
                 ship_that_got_hit = p.mark_on_fleet(row, col)  # check which one of my ships got hit
                 if p.check_if_ship_destroyed(ship_that_got_hit):  # if the ship that got hit was destroyed
-                    s.send(dumps(p.fleet[ship_that_got_hit]))  # notify opponent that he destroyed a ship
-                    p.mark_destroyed_ship_in_game_board(p.fleet[ship_that_got_hit])  # reveal ship on game board
+                    s.send(dumps(p.fleet[ship_that_got_hit]))  # notify opponent with coordinates of destroyed a ship
+                    p.mark_destroyed_ship_in_game_board(p.fleet[ship_that_got_hit])  # reveal ship on my game board
                     p.my_ships_destroyed += 1  # increment ship destroyed counter
                     if p.my_ships_destroyed == len(p.ships_len):  # if all my ships are destroyed
                         break  # stop game main loop
