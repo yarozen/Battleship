@@ -8,8 +8,7 @@ import platform
 
 
 class Player:
-    #ships_len = (4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
-    ships_len = (4, 1)
+    ships_len = (4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
     sym_ship = '@'
     sym_hit = 'x'
     sym_miss = '~'
