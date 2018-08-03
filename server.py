@@ -111,14 +111,15 @@ J {} {} {} {} {} {} {} {} {} {}
                     break
 
     def get_user_guess(self):
-        while True:
+        while True:  # loop until user provides valid input (row=A-J, col=1-10, and that its an empty cell on board
             try:
-                user = input("{}, Select Row and column (e.g. B8): ".format(self.name))
-                row = user[0].upper()
-                col = int(user[1:])
-                if row in 'ABCDEFGHIJ' and col in range(1, 11):
-                    if self.guess_board[row, col] == __class__.sym_empty:
-                        return row, col
+                flush_input()  # clear all keystrokes made by user while waiting for opponent
+                user = input("{}, Select Row and column (e.g. B8): ".format(self.name))  # get row and column from user
+                row = user[0].upper()  # take first character and make it upper case
+                col = int(user[1:])  # take the remaining characters and validate they are all digits
+                if row in 'ABCDEFGHIJ' and col in range(1, 11):  # check row and col are in range
+                    if self.guess_board[row, col] == __class__.sym_empty:  # check that this guess is on an empty cell
+                        return row, col  # if all conditions are met return row and col
             except ValueError:
                 pass
             except IndexError:
@@ -167,6 +168,16 @@ def get_ip_address():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
     return s.getsockname()[0]
+
+
+def flush_input():
+    try:
+        import msvcrt
+        while msvcrt.kbhit():
+            msvcrt.getch()
+    except ImportError:
+        import termios
+        termios.tcflush(sys.stdin, termios.TCIOFLUSH)
 
 
 def main():
@@ -223,7 +234,11 @@ def main():
                 my_turn = False  # switch turns
         else:  # if its opponent's turn
             print("Waiting for {} to send his guess".format(opponent_name))  # prompt waiting for opponent
-            row, col = loads(s.recv(1024))  # receive guessed row and column from opponent
+            try:
+                row, col = loads(s.recv(1024))  # receive guessed row and column from opponent
+            except EOFError:
+                print("{} has disconnected".format(opponent_name))
+                sys.exit()
             if p.check_if_hit(row, col):  # if opponent hit one of my ships
                 s.send(dumps(True))  # notify opponent he hit one of my ships
                 p.mark_on_board(row, col, True, p.game_board)  # mark hit on my game board
