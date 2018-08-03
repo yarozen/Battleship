@@ -131,17 +131,12 @@ J {} {} {} {} {} {} {} {} {} {}
             return True
         return False
 
-    def mark_on_board(self, row, col, hit, board_type):
-        if board_type == 'guess_board':
-            if hit:
-                self.guess_board[row, col] = __class__.sym_hit
-            else:
-                self.guess_board[row, col] = __class__.sym_miss
-        elif board_type == 'game_board':
-            if hit:
-                self.game_board[row, col] = __class__.sym_hit
-            else:
-                self.game_board[row, col] = __class__.sym_miss
+    @staticmethod
+    def mark_on_board(row, col, hit, board_type):
+        if hit:
+            board_type[row, col] = __class__.sym_hit
+        else:
+            board_type[row, col] = __class__.sym_miss
 
     def mark_on_fleet(self, row, col):
         for ship in self.fleet:
@@ -156,25 +151,16 @@ J {} {} {} {} {} {} {} {} {} {}
         else:  # if all parts of ship got hit
             return True
 
-    def mark_destroyed_ship_on_board(self, ship, board_type):
-        if board_type == 'guess_board':
-            for part in ship:
-                self.guess_board[part] = __class__.sym_destroyed
-                for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
-                    try:
-                        if self.guess_board[chr(ord(part[0]) + a), part[1] + b] == __class__.sym_empty:
-                            self.guess_board[chr(ord(part[0]) + a), part[1] + b] = __class__.sym_miss
-                    except KeyError:
-                        pass
-        elif board_type == 'game_board':
-            for part in ship:
-                self.game_board[part] = __class__.sym_destroyed
-                for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
-                    try:
-                        if self.game_board[chr(ord(part[0]) + a), part[1] + b] == __class__.sym_empty:
-                            self.game_board[chr(ord(part[0]) + a), part[1] + b] = __class__.sym_miss
-                    except KeyError:
-                        pass
+    @staticmethod
+    def mark_destroyed_ship_on_board(ship, board_type):
+        for part in ship:
+            board_type[part] = __class__.sym_destroyed
+            for a, b in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
+                try:
+                    if board_type[chr(ord(part[0]) + a), part[1] + b] == __class__.sym_empty:
+                        board_type[chr(ord(part[0]) + a), part[1] + b] = __class__.sym_miss
+                except KeyError:
+                    pass
 
 
 def get_ip_address():
@@ -225,27 +211,27 @@ def main():
             s.send(dumps((row, col)))  # send my guess to opponent
             hit = loads(s.recv(1024))  # get opponent's feedback on my guess (hit or miss)
             if hit:  # if I hit one of the opponent's ships
-                p.mark_on_board(row, col, True, 'guess_board')  # mark the hit on my guess board
+                p.mark_on_board(row, col, True, p.guess_board)  # mark the hit on my guess board
                 ship_destroyed = (loads(s.recv(1024)))  # get opponent notification it I destroyed a ship
                 if ship_destroyed:  # if I destroyed opponent's ship
-                    p.mark_destroyed_ship_on_board(ship_destroyed, 'guess_board')  # reveal ship on my guess board
+                    p.mark_destroyed_ship_on_board(ship_destroyed, p.guess_board)  # reveal ship on my guess board
                     p.opponent_ships_destroyed += 1  # increment my opponent's destroyed ship counter
                     if p.opponent_ships_destroyed == len(p.ships_len):  # if all opponent's ships are destroyed
                         break  # stop game main loop
             else:  # if I missed
-                p.mark_on_board(row, col, False, 'guess_board')  # mark miss on my guess board
+                p.mark_on_board(row, col, False, p.guess_board)  # mark miss on my guess board
                 my_turn = False  # switch turns
         else:  # if its opponent's turn
             print("Waiting for {} to send his guess".format(opponent_name))  # prompt waiting for opponent
             row, col = loads(s.recv(1024))  # receive guessed row and column from opponent
             if p.check_if_hit(row, col):  # if opponent hit one of my ships
                 s.send(dumps(True))  # notify opponent he hit one of my ships
-                p.mark_on_board(row, col, True, 'game_board')  # mark hit on my game board
+                p.mark_on_board(row, col, True, p.game_board)  # mark hit on my game board
                 ship_that_got_hit = p.mark_on_fleet(row, col)  # check which one of my ships got hit
                 if p.check_if_ship_destroyed(ship_that_got_hit):  # if the ship that got hit was destroyed
                     s.send(dumps(p.fleet[ship_that_got_hit]))  # notify opponent with coordinates of destroyed a ship
                     p.mark_destroyed_ship_on_board(p.fleet[ship_that_got_hit],
-                                                   'game_board')  # reveal ship on game board
+                                                   p.game_board)  # reveal ship on game board
                     p.my_ships_destroyed += 1  # increment ship destroyed counter
                     if p.my_ships_destroyed == len(p.ships_len):  # if all my ships are destroyed
                         break  # stop game main loop
@@ -253,7 +239,7 @@ def main():
                     s.send(dumps(False))  # notify opponent that the hit didn't destroy a ship
             else:  # if opponent missed
                 s.send(dumps(False))  # notify opponent that he missed
-                p.mark_on_board(row, col, False, 'game_board')  # mark the miss on my game board
+                p.mark_on_board(row, col, False, p.game_board)  # mark the miss on my game board
                 my_turn = True  # switch turn to opponent
         p.print_board(my_name, opponent_name)  # print updated boards after each turn
     ##########
